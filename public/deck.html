@@ -88,17 +88,32 @@
 </section>
 
 <section class="slide">
-  <div class="eyebrow">Job one · the first prompt, exactly</div>
-  <blockquote>
-    <div class="typed">&gt; we build it now</div>
-    <div class="q serif">"one styling agent that puts together a full outfit from <em>several public Shopify stores</em>"</div>
-  </blockquote>
-  <div class="then">
-    <span class="pill"><b>✓</b> found which stores publish <code>/products.json</code></span>
-    <span class="pill"><b>✓</b> no API key on the laptop, so it drove the local Claude Code login headless</span>
-    <span class="pill"><b>✓</b> wrote server + page, zero dependencies</span>
-    <span class="pill"><b>✓</b> ran it, saw thin results, deepened the catalog itself</span>
-  </div>
+  <div class="eyebrow">Job one · the build prompt</div>
+<pre>Build a one-page web app called Cross-Store Stylist. Zero dependencies, Node 20, one server file + one HTML page.
+
+<span class="hl">WHAT IT DOES</span>
+One stylist agent that puts together a full outfit from several independent public Shopify stores.
+The shopper types an occasion and a budget ("rooftop dinner in Tel Aviv, woman, under $500").
+They get one complete look: one real product per garment, from at least 3 different stores, inside
+the budget, each with photo, price, a one-line reason, and a link to the real product page.
+
+<span class="hl">HOW</span>
+- No store integrations and no store API keys. Every Shopify storefront publishes /products.json:
+  find stores that expose it, read them live at request time, keep in-stock items only, cache 30 min.
+- Agent loop: PLAN (small fast model: brief → garment slots + literal search keywords + budget)
+  → SEARCH (plain code, score per slot, keep the shortlist diverse across stores)
+  → CURATE (Claude Fable 5.1: pick one product id per slot so the pieces work together)
+  → if a shelf is empty, the stylist writes new keywords and the search runs again.
+- The model may only return ids from the list it was shown. It can never invent a product or a price.
+- <span class="hl">Enforce the budget in code, not in the prompt</span>: if a look is over, swap the priciest piece down.
+- REFINE: under every look, a box: "swap the shoes for flats", "add a hat", "get it under $350".
+  Keep what the shopper liked, change only what they didn't, go back to the stores if needed.
+- Stream every step to the page so the room watches the agent work. A look in about 20 seconds.
+- No API key on this laptop: drive the local Claude Code login headless (claude -p). Host a copy on Cloud Run.
+
+<span class="hl">PROVE IT</span>
+Run it end to end yourself, in a real browser, before you tell me it works. Fix what your own run gets wrong.</pre>
+  <p class="lead" style="margin-top:14px;font-size:16px">This is the full brief Fable worked to. I gave it in six short messages over the hour (next slide, as typed); this is what they add up to.</p>
 </section>
 
 <section class="slide">

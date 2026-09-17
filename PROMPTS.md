@@ -4,6 +4,39 @@ Fable 5.1 did two jobs here: it **built** the app, and it **is** the stylist ins
 
 ## 1. Fable built it (Claude Code, one session, about an hour)
 
+### The build brief
+
+This is the full brief Fable worked to. It was given in six short messages over the hour (table below, as typed); this is what they add up to.
+
+```
+Build a one-page web app called Cross-Store Stylist. Zero dependencies, Node 20, one server file + one HTML page.
+
+WHAT IT DOES
+One stylist agent that puts together a full outfit from several independent public Shopify stores.
+The shopper types an occasion and a budget ("rooftop dinner in Tel Aviv, woman, under $500").
+They get one complete look: one real product per garment, from at least 3 different stores, inside
+the budget, each with photo, price, a one-line reason, and a link to the real product page.
+
+HOW
+- No store integrations and no store API keys. Every Shopify storefront publishes /products.json:
+  find stores that expose it, read them live at request time, keep in-stock items only, cache 30 min.
+- Agent loop: PLAN (small fast model: brief → garment slots + literal search keywords + budget)
+  → SEARCH (plain code, score per slot, keep the shortlist diverse across stores)
+  → CURATE (Claude Fable 5.1: pick one product id per slot so the pieces work together)
+  → if a shelf is empty, the stylist writes new keywords and the search runs again.
+- The model may only return ids from the list it was shown. It can never invent a product or a price.
+- Enforce the budget in code, not in the prompt: if a look is over, swap the priciest piece down.
+- REFINE: under every look, a box: "swap the shoes for flats", "add a hat", "get it under $350".
+  Keep what the shopper liked, change only what they didn't, go back to the stores if needed.
+- Stream every step to the page so the room watches the agent work. A look in about 20 seconds.
+- No API key on this laptop: drive the local Claude Code login headless (claude -p). Host a copy on Cloud Run.
+
+PROVE IT
+Run it end to end yourself, in a real browser, before you tell me it works. Fix what your own run gets wrong.
+```
+
+### The six messages, as typed
+
 The whole app was written in a single Claude Code session running `claude-fable-5-1`. No code was typed by hand. These are the human prompts, in order, as typed (typos included):
 
 | # | Prompt | What Fable did |
