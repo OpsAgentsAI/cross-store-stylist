@@ -110,7 +110,31 @@ function findClaudeBin() {
 const CLAUDE_BIN = findClaudeBin();
 const EMPTY_CWD = fs.mkdtempSync(path.join(os.tmpdir(), 'stylist-'));
 
+// Hosted on Google Cloud: Vertex AI with the service's own identity (no keys anywhere).
+const VERTEX_PROJECT = process.env.VERTEX_PROJECT || '';
+const VERTEX_PLAN = process.env.VERTEX_PLAN_MODEL || 'gemini-2.5-flash';
+const VERTEX_CURATE = process.env.VERTEX_CURATE_MODEL || 'gemini-2.5-pro';
+let vtok = { v: '', exp: 0 };
+async function vertexToken() {
+  if (Date.now() < vtok.exp) return vtok.v;
+  const r = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', { headers: { 'Metadata-Flavor': 'Google' } });
+  const j = await r.json();
+  vtok = { v: j.access_token, exp: Date.now() + (j.expires_in - 120) * 1000 };
+  return vtok.v;
+}
+async function askVertex(prompt, model) {
+  const res = await fetch(`https://aiplatform.googleapis.com/v1/projects/${VERTEX_PROJECT}/locations/global/publishers/google/models/${model}:generateContent`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${await vertexToken()}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.4 } }),
+  });
+  const j = await res.json();
+  if (!res.ok) throw new Error(j.error?.message || `Vertex ${res.status}`);
+  return (j.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
+}
+
 async function askModel(prompt, model = MODEL) {
+  if (VERTEX_PROJECT && !process.env.ANTHROPIC_API_KEY) return askVertex(prompt, model === PLAN_MODEL ? VERTEX_PLAN : VERTEX_CURATE);
   if (process.env.ANTHROPIC_API_KEY) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -202,10 +226,15 @@ async function style(brief, say) {
 }
 
 // ---------- http ----------
+const DAILY_CAP = Number(process.env.STYLIST_DAILY_CAP || 300);
+let runs = { day: '', n: 0 };
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/api/style') {
-    res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
+    const day = new Date().toISOString().slice(0, 10);
+    if (runs.day !== day) runs = { day, n: 0 };
+    if (++runs.n > DAILY_CAP) { res.writeHead(429); return res.end('daily demo limit reached'); }
+    res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache, no-transform', connection: 'keep-alive', 'x-accel-buffering': 'no' });
     const say = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     try { await style((url.searchParams.get('q') || '').slice(0, 600), say); }
     catch (e) { say('fail', { text: String(e.message || e) }); }
@@ -215,6 +244,6 @@ http.createServer(async (req, res) => {
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   res.end(fs.readFileSync(path.join(__dirname, 'public/index.html')));
 }).listen(PORT, () => {
-  console.log(`Cross-Store Stylist → http://localhost:${PORT}   model=${MODEL}   via=${process.env.ANTHROPIC_API_KEY ? 'Anthropic API' : CLAUDE_BIN}`);
+  console.log(`Cross-Store Stylist → http://localhost:${PORT}   model=${MODEL}   via=${process.env.ANTHROPIC_API_KEY ? 'Anthropic API' : VERTEX_PROJECT ? 'Vertex AI ' + VERTEX_CURATE : CLAUDE_BIN}`);
   STORES.forEach((s) => loadStore(s).catch(() => {})); // warm the catalog
 });

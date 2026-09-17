@@ -4,74 +4,146 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cross-Store Stylist</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Ccircle cx='410' cy='512' r='296' fill='none' stroke='%237b83f2' stroke-width='74'/%3E%3Cg stroke='%234dd0e1' stroke-width='74' stroke-linecap='round' fill='none'%3E%3Cpath d='M452 778 655 245 862 778M655 245 890 360M548 562H768'/%3E%3C/g%3E%3C/svg%3E">
 <style>
-  :root { --bg:#faf7f2; --ink:#1c1a17; --mute:#6f675c; --line:#e4dccf; --card:#fff; --accent:#b4532a; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#15130f; --ink:#f3ede2; --mute:#a39a8b; --line:#2e2a23; --card:#1e1b16; --accent:#e58a5c; } }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 ui-serif, Georgia, serif; }
-  main { max-width:1100px; margin:0 auto; padding:32px 16px 80px; }
-  h1 { font-size:clamp(28px,5vw,44px); margin:0 0 4px; letter-spacing:-.02em; }
-  .sub { color:var(--mute); margin:0 0 24px; font-family:ui-sans-serif,system-ui,sans-serif; font-size:15px; }
-  form { display:flex; gap:8px; flex-wrap:wrap; }
-  input { flex:1 1 320px; padding:14px 16px; font:inherit; border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink); }
-  button { padding:14px 22px; font:600 15px ui-sans-serif,system-ui,sans-serif; border:0; border-radius:12px; background:var(--accent); color:#fff; cursor:pointer; }
-  button:disabled { opacity:.5; cursor:wait; }
-  .chips { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 28px; }
-  .chip { font:13px ui-sans-serif,system-ui,sans-serif; padding:6px 12px; border:1px solid var(--line); border-radius:99px; background:transparent; color:var(--mute); cursor:pointer; }
-  #log { font:13px/1.7 ui-monospace,Menlo,monospace; color:var(--mute); margin-bottom:24px; white-space:pre-wrap; }
-  #log b { color:var(--ink); font-weight:600; }
-  .look h2 { font-size:30px; margin:0 0 6px; letter-spacing:-.01em; }
-  .note { max-width:70ch; margin:0 0 8px; }
-  .meta { font:14px ui-sans-serif,system-ui,sans-serif; color:var(--mute); margin-bottom:20px; }
-  .meta strong { color:var(--ink); }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; display:flex; flex-direction:column; text-decoration:none; color:inherit; }
-  .card img { width:100%; aspect-ratio:4/5; object-fit:cover; background:var(--line); }
-  .body { padding:12px 14px 16px; font-family:ui-sans-serif,system-ui,sans-serif; }
-  .slot { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); font-weight:700; }
-  .store { float:right; font-size:11px; color:var(--mute); border:1px solid var(--line); border-radius:99px; padding:1px 8px; }
-  .title { font-size:14px; font-weight:600; margin:6px 0 2px; }
-  .price { font-size:14px; }
-  .why { font-size:13px; color:var(--mute); margin-top:8px; }
+  :root { --bg:#f6f1e8; --ink:#17140f; --mute:#6b6257; --line:#ddd3c2; --card:#fffdf9; --accent:#5a4bd6; --accent-ink:#fff; --cyan:#1fa9bd; --ok:#1d7a4f; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#100f14; --ink:#f2eee6; --mute:#a29b90; --line:#2b2833; --card:#19171f; --accent:#8b83f5; --accent-ink:#0d0b14; --cyan:#4dd0e1; --ok:#5fd39b; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .serif { font-family:ui-serif,"Iowan Old Style","Palatino Linotype",Georgia,serif; }
+  header.bar { display:flex; align-items:center; gap:10px; max-width:1180px; margin:0 auto; padding:18px 16px 0; }
+  header.bar svg { width:38px; height:38px; flex:none; }
+  header.bar .brand { font-weight:700; letter-spacing:.01em; font-size:15px; }
+  header.bar .brand span { color:var(--mute); font-weight:500; }
+  header.bar a { margin-left:auto; font-size:13px; color:var(--mute); text-decoration:none; border:1px solid var(--line); padding:6px 12px; border-radius:99px; }
+  main { max-width:1180px; margin:0 auto; padding:28px 16px 90px; }
+  h1 { font-size:clamp(34px,6.4vw,68px); line-height:1.02; margin:18px 0 14px; letter-spacing:-.03em; font-weight:600; max-width:16ch; }
+  h1 em { font-style:italic; color:var(--accent); }
+  .sub { color:var(--mute); margin:0 0 26px; max-width:62ch; font-size:17px; }
+  form { display:flex; gap:10px; flex-wrap:wrap; }
+  input { flex:1 1 340px; min-width:0; padding:17px 18px; font:inherit; font-size:17px; border:1.5px solid var(--ink); border-radius:14px; background:var(--card); color:var(--ink); outline:none; }
+  input:focus { border-color:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent); }
+  button.go { padding:17px 28px; font:700 16px inherit; border:0; border-radius:14px; background:var(--accent); color:var(--accent-ink); cursor:pointer; }
+  button.go:disabled { cursor:wait; filter:saturate(.4); }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 0; }
+  .chip { font:500 13px inherit; padding:7px 13px; border:1px solid var(--line); border-radius:99px; background:transparent; color:var(--mute); cursor:pointer; }
+  .chip:hover { color:var(--ink); border-color:var(--ink); }
+
+  #work { display:none; margin-top:34px; border:1px solid var(--line); border-radius:18px; background:var(--card); padding:18px; }
+  #work.on { display:block; }
+  .steps { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  .step { display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; color:var(--mute); padding:7px 13px; border-radius:99px; border:1px solid var(--line); }
+  .step i { width:9px; height:9px; border-radius:50%; background:var(--line); }
+  .step.live { color:var(--ink); border-color:var(--accent); }
+  .step.live i { background:var(--accent); animation:pulse 1s infinite; }
+  .step.done { color:var(--ok); border-color:transparent; }
+  .step.done i { background:var(--ok); }
+  @keyframes pulse { 50% { transform:scale(1.7); opacity:.45; } }
+  @media (prefers-reduced-motion: reduce) { .step.live i { animation:none; } }
+  #clock { margin-left:auto; font:600 14px ui-monospace,Menlo,monospace; color:var(--mute); }
+  #status { font-size:15px; margin:0 0 12px; min-height:1.5em; }
+  .stores { display:flex; flex-wrap:wrap; gap:6px; }
+  .st { font-size:12px; padding:4px 10px; border-radius:99px; border:1px dashed var(--line); color:var(--mute); transition:all .25s; }
+  .st.in { border:1px solid color-mix(in srgb,var(--cyan) 60%,transparent); color:var(--ink); background:color-mix(in srgb,var(--cyan) 12%,transparent); }
+  .st b { font-weight:700; }
+  .shelves { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .sh { font-size:12px; padding:4px 10px; border-radius:8px; background:color-mix(in srgb,var(--accent) 12%,transparent); }
+
+  .look { margin-top:40px; }
+  .eyebrow { font:700 12px inherit; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+  .look h2 { font-size:clamp(30px,4.6vw,52px); line-height:1.05; margin:6px 0 12px; letter-spacing:-.02em; font-weight:600; }
+  .note { max-width:68ch; margin:0 0 18px; font-size:18px; }
+  .facts { display:flex; flex-wrap:wrap; gap:0; border:1.5px solid var(--ink); border-radius:14px; overflow:hidden; margin-bottom:24px; width:fit-content; max-width:100%; }
+  .fact { padding:10px 18px; border-right:1.5px solid var(--ink); }
+  .fact:last-child { border-right:0; }
+  .fact .k { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
+  .fact .v { font-weight:700; font-size:20px; }
+  .fact .v small { font-weight:500; font-size:13px; color:var(--mute); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); gap:18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:6px; overflow:hidden; display:flex; flex-direction:column; text-decoration:none; color:inherit; transition:transform .2s, box-shadow .2s; opacity:0; animation:rise .5s forwards; }
+  .card:hover { transform:translateY(-3px); box-shadow:0 14px 30px -18px rgba(0,0,0,.5); }
+  @keyframes rise { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce) { .card { animation:none; opacity:1; } }
+  .card img { width:100%; aspect-ratio:4/5; object-fit:cover; background:var(--line); display:block; }
+  .body { padding:13px 14px 16px; display:flex; flex-direction:column; gap:4px; flex:1; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .slot { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); font-weight:700; }
+  .store { font-size:11px; font-weight:600; border:1px solid var(--ink); border-radius:99px; padding:1px 9px; white-space:nowrap; }
+  .title { font-size:15px; font-weight:600; line-height:1.3; margin-top:4px; }
+  .price { font-size:15px; }
+  .why { font-size:13.5px; color:var(--mute); margin-top:6px; }
+  .buy { margin-top:auto; padding-top:10px; font-size:13px; font-weight:700; color:var(--accent); }
+  .fine { margin-top:34px; font-size:13px; color:var(--mute); max-width:80ch; }
+  .err { color:#c0392b; font-weight:600; }
 </style>
 </head>
 <body>
+<header class="bar">
+  <svg viewBox="0 0 1024 1024" role="img" aria-label="OpsAgents AI"><circle cx="410" cy="512" r="296" fill="none" stroke="#7b83f2" stroke-width="74"/><g stroke="#4dd0e1" stroke-width="74" stroke-linecap="round" fill="none"><path d="M452 778 655 245 862 778M655 245 890 360M548 562H768"/></g></svg>
+  <div class="brand">OpsAgents AI <span>· Build Day</span></div>
+  <a href="https://github.com/OpsAgentsAI/cross-store-stylist" target="_blank" rel="noopener">Source on GitHub</a>
+</header>
 <main>
-  <h1>Cross-Store Stylist</h1>
-  <p class="sub">One agent. A dozen independent Shopify stores. One outfit no single store could sell you. Live catalogs, no integrations.</p>
+  <h1 class="serif">One stylist. Thirteen stores. <em>One outfit.</em></h1>
+  <p class="sub">Tell it where you're going. An agent shops thirteen independent Shopify stores live and builds a look no single store could sell you, inside your budget. No integrations. The agent is the integration.</p>
   <form id="f">
-    <input id="q" placeholder="Where are you going? e.g. outdoor wedding in Tuscany in October, under $600" autofocus>
-    <button id="go">Style me</button>
+    <input id="q" aria-label="Where are you going?" placeholder="Outdoor wedding in Tuscany in October, under $600" autofocus>
+    <button class="go" id="go">Style me</button>
   </form>
   <div class="chips">
     <button class="chip">Rooftop dinner in Tel Aviv in September, woman, under $500</button>
     <button class="chip">First day at a design studio, man, smart but not stiff</button>
     <button class="chip">Weekend hike then brunch, woman, one outfit for both</button>
   </div>
-  <div id="log"></div>
+
+  <section id="work" aria-live="polite">
+    <div class="steps">
+      <div class="step" data-s="plan"><i></i>Plan</div>
+      <div class="step" data-s="search"><i></i>Search stores</div>
+      <div class="step" data-s="style"><i></i>Style the look</div>
+      <div id="clock">0s</div>
+    </div>
+    <p id="status"></p>
+    <div class="stores" id="stores"></div>
+    <div class="shelves" id="shelves"></div>
+  </section>
+
   <div id="out"></div>
+  <p class="fine">Catalogs are read live from each store's public storefront feed at request time; nothing is stored. Product names and photos belong to their brands. This is a demo and is not affiliated with any of them.</p>
 </main>
 <script>
 const $ = (s) => document.querySelector(s);
-const log = (html) => { $('#log').innerHTML += html + '\n'; };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const step = (name) => { const order = ['plan','search','style']; const i = order.indexOf(name);
+  document.querySelectorAll('.step').forEach((el) => { const j = order.indexOf(el.dataset.s); el.className = 'step' + (j < i ? ' done' : j === i ? ' live' : ''); }); };
+let tick;
+fetch('/api/stores').then((r) => r.json()).then((list) => { $('#stores').innerHTML = list.map((s) => '<span class="st" data-n="' + esc(s.name) + '">' + esc(s.name) + '</span>').join(''); });
 document.querySelectorAll('.chip').forEach((c) => c.onclick = () => { $('#q').value = c.textContent; $('#f').requestSubmit(); });
 $('#f').onsubmit = (e) => {
   e.preventDefault();
   const q = $('#q').value.trim(); if (!q) return;
-  $('#log').innerHTML = ''; $('#out').innerHTML = ''; $('#go').disabled = true;
+  $('#out').innerHTML = ''; $('#shelves').innerHTML = ''; $('#go').disabled = true; $('#work').classList.add('on');
+  document.querySelectorAll('.st').forEach((el) => { el.classList.remove('in'); el.textContent = el.dataset.n; });
+  step('plan'); $('#status').textContent = 'Reading the brief and deciding what the outfit needs…';
+  const t0 = Date.now(); clearInterval(tick); tick = setInterval(() => { $('#clock').textContent = Math.round((Date.now() - t0) / 1000) + 's'; }, 500);
   const es = new EventSource('/api/style?q=' + encodeURIComponent(q));
-  const done = () => { es.close(); $('#go').disabled = false; };
-  es.addEventListener('step', (m) => log('→ <b>' + esc(JSON.parse(m.data).text) + '</b>'));
-  es.addEventListener('store', (m) => { const d = JSON.parse(m.data); log('   ' + esc(d.store) + ': ' + d.count + ' in-stock products, live'); });
-  es.addEventListener('plan', (m) => { const d = JSON.parse(m.data); log('   plan: ' + esc(d.vibe) + '  [' + d.slots.map((s) => esc(s.slot)).join(' · ') + ']' + (d.budget ? '  budget $' + d.budget : '')); });
-  es.addEventListener('shelf', (m) => { const d = JSON.parse(m.data); log('   ' + esc(d.slot) + ': ' + d.count + ' candidates from ' + d.stores.length + ' stores'); });
-  es.addEventListener('fail', (m) => { log('✗ ' + esc(JSON.parse(m.data).text)); done(); });
+  const done = () => { es.close(); clearInterval(tick); $('#go').disabled = false; };
+  es.addEventListener('store', (m) => { const d = JSON.parse(m.data); const el = document.querySelector('.st[data-n="' + CSS.escape(d.store) + '"]'); if (el && d.count) { el.classList.add('in'); el.innerHTML = esc(d.store) + ' <b>' + d.count + '</b>'; } });
+  es.addEventListener('plan', (m) => { const d = JSON.parse(m.data); $('#status').innerHTML = '<b>Plan:</b> ' + esc(d.vibe) + (d.budget ? ' · budget $' + d.budget : ''); });
+  es.addEventListener('step', (m) => { const t = JSON.parse(m.data).text; if (/Searching/.test(t)) step('search'); if (/Putting|searching again/.test(t)) step('style'); if (!/Reading/.test(t)) $('#status').innerHTML = esc(t); });
+  es.addEventListener('shelf', (m) => { const d = JSON.parse(m.data); $('#shelves').innerHTML += '<span class="sh"><b>' + esc(d.slot) + '</b> · ' + d.count + ' candidates · ' + d.stores.length + ' stores</span>'; });
+  es.addEventListener('fail', (m) => { $('#status').innerHTML = '<span class="err">' + esc(JSON.parse(m.data).text) + '</span>'; done(); });
   es.addEventListener('look', (m) => {
     const d = JSON.parse(m.data);
-    $('#out').innerHTML = '<section class="look"><h2>' + esc(d.title) + '</h2><p class="note">' + esc(d.note) + '</p>' +
-      '<div class="meta"><strong>$' + d.total.toFixed(0) + '</strong> total' + (d.budget ? ' of $' + d.budget : '') + ' · <strong>' + d.stores.length + ' stores</strong>: ' + d.stores.map(esc).join(', ') + ' · ' + d.seconds + 's</div>' +
-      '<div class="grid">' + d.picks.map((k) => '<a class="card" target="_blank" rel="noopener" href="' + esc(k.product.url) + '"><img loading="lazy" src="' + esc(k.product.image) + (k.product.image.includes('?') ? '&' : '?') + 'width=500" alt=""><div class="body"><span class="store">' + esc(k.product.storeName) + '</span><span class="slot">' + esc(k.slot) + '</span><div class="title">' + esc(k.product.title) + '</div><div class="price">$' + k.product.price.toFixed(0) + '</div><div class="why">' + esc(k.why) + '</div></div></a>').join('') + '</div></section>';
+    document.querySelectorAll('.step').forEach((el) => el.className = 'step done');
+    $('#status').innerHTML = 'Done. One look from ' + d.stores.length + ' stores.';
+    $('#out').innerHTML = '<section class="look"><div class="eyebrow">Your look</div><h2 class="serif">' + esc(d.title) + '</h2><p class="note serif">' + esc(d.note) + '</p>' +
+      '<div class="facts"><div class="fact"><div class="k">Total</div><div class="v">$' + d.total.toFixed(0) + (d.budget ? ' <small>of $' + d.budget + '</small>' : '') + '</div></div>' +
+      '<div class="fact"><div class="k">Stores</div><div class="v">' + d.stores.length + ' <small>' + d.stores.map(esc).join(' · ') + '</small></div></div>' +
+      '<div class="fact"><div class="k">Pieces</div><div class="v">' + d.picks.length + '</div></div>' +
+      '<div class="fact"><div class="k">Time</div><div class="v">' + d.seconds + 's</div></div></div>' +
+      '<div class="grid">' + d.picks.map((k, i) => '<a class="card" style="animation-delay:' + (i * 90) + 'ms" target="_blank" rel="noopener" href="' + esc(k.product.url) + '"><img loading="lazy" src="' + esc(k.product.image) + (k.product.image.includes('?') ? '&' : '?') + 'width=600" alt="' + esc(k.product.title) + '"><div class="body"><div class="row"><span class="slot">' + esc(k.slot) + '</span><span class="store">' + esc(k.product.storeName) + '</span></div><div class="title">' + esc(k.product.title) + '</div><div class="price">$' + k.product.price.toFixed(0) + '</div><div class="why">' + esc(k.why) + '</div><div class="buy">View at ' + esc(k.product.storeName) + ' →</div></div></a>').join('') + '</div></section>';
+    $('#out').scrollIntoView({ behavior: 'smooth', block: 'start' });
     done();
   });
   es.onerror = done;

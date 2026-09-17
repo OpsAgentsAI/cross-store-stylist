@@ -11,6 +11,8 @@ and assembles one coherent look across brands, in budget, with a reason for ever
 No store integration, no API keys from the stores, no partnership: every Shopify storefront
 already publishes `/products.json`. The agent is the integration.
 
+**Live:** https://cross-store-stylist-611895754140.us-central1.run.app (hosted copy runs on Vertex AI Gemini; the laptop demo runs on Claude Fable 5.1)
+
 ## How it works
 
 1. **Plan** (Claude Haiku 4.5): brief → garment slots, search keywords, budget, palette.
