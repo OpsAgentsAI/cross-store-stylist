@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cross-Store Stylist</title>
+<style>
+  :root { --bg:#faf7f2; --ink:#1c1a17; --mute:#6f675c; --line:#e4dccf; --card:#fff; --accent:#b4532a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#15130f; --ink:#f3ede2; --mute:#a39a8b; --line:#2e2a23; --card:#1e1b16; --accent:#e58a5c; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 ui-serif, Georgia, serif; }
+  main { max-width:1100px; margin:0 auto; padding:32px 16px 80px; }
+  h1 { font-size:clamp(28px,5vw,44px); margin:0 0 4px; letter-spacing:-.02em; }
+  .sub { color:var(--mute); margin:0 0 24px; font-family:ui-sans-serif,system-ui,sans-serif; font-size:15px; }
+  form { display:flex; gap:8px; flex-wrap:wrap; }
+  input { flex:1 1 320px; padding:14px 16px; font:inherit; border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink); }
+  button { padding:14px 22px; font:600 15px ui-sans-serif,system-ui,sans-serif; border:0; border-radius:12px; background:var(--accent); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:wait; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 28px; }
+  .chip { font:13px ui-sans-serif,system-ui,sans-serif; padding:6px 12px; border:1px solid var(--line); border-radius:99px; background:transparent; color:var(--mute); cursor:pointer; }
+  #log { font:13px/1.7 ui-monospace,Menlo,monospace; color:var(--mute); margin-bottom:24px; white-space:pre-wrap; }
+  #log b { color:var(--ink); font-weight:600; }
+  .look h2 { font-size:30px; margin:0 0 6px; letter-spacing:-.01em; }
+  .note { max-width:70ch; margin:0 0 8px; }
+  .meta { font:14px ui-sans-serif,system-ui,sans-serif; color:var(--mute); margin-bottom:20px; }
+  .meta strong { color:var(--ink); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; display:flex; flex-direction:column; text-decoration:none; color:inherit; }
+  .card img { width:100%; aspect-ratio:4/5; object-fit:cover; background:var(--line); }
+  .body { padding:12px 14px 16px; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .slot { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); font-weight:700; }
+  .store { float:right; font-size:11px; color:var(--mute); border:1px solid var(--line); border-radius:99px; padding:1px 8px; }
+  .title { font-size:14px; font-weight:600; margin:6px 0 2px; }
+  .price { font-size:14px; }
+  .why { font-size:13px; color:var(--mute); margin-top:8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cross-Store Stylist</h1>
+  <p class="sub">One agent. A dozen independent Shopify stores. One outfit no single store could sell you. Live catalogs, no integrations.</p>
+  <form id="f">
+    <input id="q" placeholder="Where are you going? e.g. outdoor wedding in Tuscany in October, under $600" autofocus>
+    <button id="go">Style me</button>
+  </form>
+  <div class="chips">
+    <button class="chip">Rooftop dinner in Tel Aviv in September, woman, under $500</button>
+    <button class="chip">First day at a design studio, man, smart but not stiff</button>
+    <button class="chip">Weekend hike then brunch, woman, one outfit for both</button>
+  </div>
+  <div id="log"></div>
+  <div id="out"></div>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const log = (html) => { $('#log').innerHTML += html + '\n'; };
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+document.querySelectorAll('.chip').forEach((c) => c.onclick = () => { $('#q').value = c.textContent; $('#f').requestSubmit(); });
+$('#f').onsubmit = (e) => {
+  e.preventDefault();
+  const q = $('#q').value.trim(); if (!q) return;
+  $('#log').innerHTML = ''; $('#out').innerHTML = ''; $('#go').disabled = true;
+  const es = new EventSource('/api/style?q=' + encodeURIComponent(q));
+  const done = () => { es.close(); $('#go').disabled = false; };
+  es.addEventListener('step', (m) => log('→ <b>' + esc(JSON.parse(m.data).text) + '</b>'));
+  es.addEventListener('store', (m) => { const d = JSON.parse(m.data); log('   ' + esc(d.store) + ': ' + d.count + ' in-stock products, live'); });
+  es.addEventListener('plan', (m) => { const d = JSON.parse(m.data); log('   plan: ' + esc(d.vibe) + '  [' + d.slots.map((s) => esc(s.slot)).join(' · ') + ']' + (d.budget ? '  budget $' + d.budget : '')); });
+  es.addEventListener('shelf', (m) => { const d = JSON.parse(m.data); log('   ' + esc(d.slot) + ': ' + d.count + ' candidates from ' + d.stores.length + ' stores'); });
+  es.addEventListener('fail', (m) => { log('✗ ' + esc(JSON.parse(m.data).text)); done(); });
+  es.addEventListener('look', (m) => {
+    const d = JSON.parse(m.data);
+    $('#out').innerHTML = '<section class="look"><h2>' + esc(d.title) + '</h2><p class="note">' + esc(d.note) + '</p>' +
+      '<div class="meta"><strong>$' + d.total.toFixed(0) + '</strong> total' + (d.budget ? ' of $' + d.budget : '') + ' · <strong>' + d.stores.length + ' stores</strong>: ' + d.stores.map(esc).join(', ') + ' · ' + d.seconds + 's</div>' +
+      '<div class="grid">' + d.picks.map((k) => '<a class="card" target="_blank" rel="noopener" href="' + esc(k.product.url) + '"><img loading="lazy" src="' + esc(k.product.image) + (k.product.image.includes('?') ? '&' : '?') + 'width=500" alt=""><div class="body"><span class="store">' + esc(k.product.storeName) + '</span><span class="slot">' + esc(k.slot) + '</span><div class="title">' + esc(k.product.title) + '</div><div class="price">$' + k.product.price.toFixed(0) + '</div><div class="why">' + esc(k.why) + '</div></div></a>').join('') + '</div></section>';
+    done();
+  });
+  es.onerror = done;
+};
+</script>
+</body>
+</html>
