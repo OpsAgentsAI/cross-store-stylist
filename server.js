@@ -311,6 +311,7 @@ http.createServer(async (req, res) => {
     catch (e) { say('fail', { text: String(e.message || e) }); }
     return res.end();
   }
+  if (url.pathname === '/deck') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(fs.readFileSync(path.join(__dirname, 'public/deck.html'))); }
   if (url.pathname === '/api/stores') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(STORES)); }
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   res.end(fs.readFileSync(path.join(__dirname, 'public/index.html')));

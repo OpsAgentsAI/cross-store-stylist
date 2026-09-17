@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cross-Store Stylist: the prompts</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Ccircle cx='410' cy='512' r='296' fill='none' stroke='%237b83f2' stroke-width='74'/%3E%3Cg stroke='%234dd0e1' stroke-width='74' stroke-linecap='round' fill='none'%3E%3Cpath d='M452 778 655 245 862 778M655 245 890 360M548 562H768'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+  :root { --bg:#f6f1e8; --ink:#17140f; --mute:#6b6257; --line:#d9cfbd; --card:#fffdf9; --accent:#5a4bd6; --cyan:#12879a; --ok:#1d7a4f; --warn:#b4532a; --code:#1b1824; --codeink:#efeaf7; }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:18px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; overflow:hidden; }
+  .serif { font-family:ui-serif,"Iowan Old Style","Palatino Linotype",Georgia,serif; }
+  .slide { position:absolute; inset:0; padding:clamp(24px,5vw,72px) clamp(20px,6vw,96px) 84px; display:none; flex-direction:column; justify-content:center; overflow:auto; }
+  .slide.on { display:flex; animation:in .35s ease; }
+  @keyframes in { from { opacity:0; transform:translateY(10px); } }
+  @media (prefers-reduced-motion: reduce) { .slide.on { animation:none; } }
+  .eyebrow { font:700 13px/1 inherit; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin-bottom:18px; }
+  h1 { font-size:clamp(40px,7.6vw,104px); line-height:1; letter-spacing:-.035em; margin:0 0 22px; font-weight:600; max-width:14ch; }
+  h2 { font-size:clamp(30px,4.8vw,64px); line-height:1.04; letter-spacing:-.025em; margin:0 0 26px; font-weight:600; max-width:22ch; }
+  em { font-style:italic; color:var(--accent); }
+  p.lead { font-size:clamp(18px,2vw,24px); color:var(--mute); max-width:60ch; margin:0 0 10px; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:22px; max-width:1200px; }
+  @media (max-width:820px) { .two { grid-template-columns:1fr; } }
+  .panel { border:1.5px solid var(--ink); border-radius:16px; padding:24px 26px; background:var(--card); }
+  .panel .n { font:700 13px inherit; letter-spacing:.14em; color:var(--accent); text-transform:uppercase; }
+  .panel h3 { font-size:clamp(22px,2.6vw,34px); margin:6px 0 10px; letter-spacing:-.015em; line-height:1.1; }
+  .panel p { margin:0; color:var(--mute); font-size:17px; }
+  blockquote { margin:0; border-left:6px solid var(--accent); padding:6px 0 6px 28px; max-width:1100px; }
+  blockquote .q { font-size:clamp(28px,4.4vw,60px); line-height:1.12; letter-spacing:-.02em; }
+  .typed { font:600 clamp(16px,1.6vw,20px) ui-monospace,Menlo,monospace; color:var(--cyan); margin-bottom:14px; }
+  .then { margin-top:26px; display:flex; flex-wrap:wrap; gap:10px; }
+  .pill { border:1px solid var(--line); background:var(--card); border-radius:99px; padding:8px 16px; font-size:16px; }
+  .pill b { color:var(--ok); }
+  table { border-collapse:collapse; width:100%; max-width:1200px; font-size:clamp(14px,1.35vw,18px); }
+  td { padding:11px 14px; border-top:1px solid var(--line); vertical-align:top; }
+  tr:first-child td { border-top:1.5px solid var(--ink); }
+  tr:last-child td { border-bottom:1.5px solid var(--ink); }
+  td.num { width:44px; font-weight:700; color:var(--accent); }
+  td.p { font-family:ui-monospace,Menlo,monospace; font-size:.92em; width:38%; color:var(--ink); }
+  td.d { color:var(--mute); }
+  .flow { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 26px; font-weight:600; font-size:clamp(14px,1.4vw,18px); }
+  .box { border:1.5px solid var(--ink); border-radius:12px; padding:10px 14px; background:var(--card); }
+  .box small { display:block; font-weight:500; color:var(--mute); font-size:.78em; }
+  .box.f { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .box.f small { color:#dcd8ff; }
+  .arr { color:var(--mute); }
+  .rules { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; max-width:1200px; }
+  @media (max-width:900px) { .rules { grid-template-columns:1fr 1fr; } }
+  .rule { border-top:4px solid var(--accent); padding-top:12px; font-size:clamp(15px,1.5vw,19px); font-weight:600; line-height:1.25; }
+  .rule span { display:block; font:700 12px inherit; letter-spacing:.12em; color:var(--mute); margin-bottom:6px; }
+  pre { margin:0; background:var(--code); color:var(--codeink); border-radius:14px; padding:22px 24px; font:clamp(11.5px,1.08vw,15px)/1.55 ui-monospace,Menlo,monospace; white-space:pre-wrap; max-width:1200px; overflow:auto; max-height:66vh; }
+  pre .hl { color:#ffd479; } pre .v { color:#7fe0f0; } pre .c { color:#9d95b8; }
+  .story { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; max-width:1200px; }
+  @media (max-width:820px) { .story { grid-template-columns:1fr; } }
+  .beat { border:1.5px solid var(--ink); border-radius:16px; padding:22px; background:var(--card); }
+  .beat .big { font-size:clamp(30px,3.8vw,52px); font-weight:700; letter-spacing:-.03em; line-height:1; margin:8px 0 10px; }
+  .beat .big.bad { color:var(--warn); } .beat .big.good { color:var(--ok); }
+  .beat p { margin:0; color:var(--mute); font-size:16px; }
+  .beat .k { font:700 12px inherit; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+  .links a { display:block; font:600 clamp(18px,2.2vw,28px) ui-monospace,Menlo,monospace; color:var(--ink); text-decoration:none; border-bottom:1px solid var(--line); padding:14px 0; max-width:1100px; word-break:break-all; }
+  .links a span { display:block; font:700 12px ui-sans-serif,system-ui,sans-serif; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:4px; }
+  footer { position:fixed; left:0; right:0; bottom:0; display:flex; align-items:center; gap:12px; padding:14px clamp(20px,6vw,96px); font-size:13px; color:var(--mute); background:linear-gradient(transparent,var(--bg) 40%); }
+  footer svg { width:26px; height:26px; }
+  footer .brand { font-weight:700; color:var(--ink); }
+  footer .nav { margin-left:auto; display:flex; gap:8px; align-items:center; }
+  footer button { font:600 14px inherit; border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:99px; padding:6px 14px; cursor:pointer; }
+  #bar { position:fixed; left:0; top:0; height:4px; background:var(--accent); transition:width .3s; }
+</style>
+</head>
+<body>
+<div id="bar"></div>
+
+<section class="slide on">
+  <div class="eyebrow">Tel Aviv Build Day · Breakthrough track</div>
+  <h1 class="serif">One stylist. 27 stores. <em>One outfit.</em></h1>
+  <p class="lead">Cross-Store Stylist: an agent that shops dozens of independent Shopify stores live and builds a look no single store could sell you. Built in one hour with Claude Fable 5.1.</p>
+  <p class="lead" style="color:var(--ink);font-weight:600">The prompts, exactly, and how we used Fable.</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">How we used Fable 5.1</div>
+  <h2 class="serif">Fable did <em>two jobs.</em></h2>
+  <div class="two">
+    <div class="panel"><div class="n">Job one</div><h3 class="serif">It built this.</h3><p>One Claude Code session. Six prompts from me. No hand-written code. It found the public store feeds itself, wrote the app, ran it, and fixed what its own first run got wrong.</p></div>
+    <div class="panel"><div class="n">Job two</div><h3 class="serif">It is the stylist.</h3><p>Code does the fetching and the arithmetic. Fable gets about fifty real products and has to hold five rules at once. In refinement it keeps what you liked and changes only what you didn't.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Job one · the first prompt, exactly</div>
+  <blockquote>
+    <div class="typed">&gt; we build it now</div>
+    <div class="q serif">"one styling agent that puts together a full outfit from <em>several public Shopify stores</em>"</div>
+  </blockquote>
+  <div class="then">
+    <span class="pill"><b>✓</b> found which stores publish <code>/products.json</code></span>
+    <span class="pill"><b>✓</b> no API key on the laptop, so it drove the local Claude Code login headless</span>
+    <span class="pill"><b>✓</b> wrote server + page, zero dependencies</span>
+    <span class="pill"><b>✓</b> ran it, saw thin results, deepened the catalog itself</span>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Job one · all six prompts, as typed (typos included)</div>
+  <h2 class="serif" style="margin-bottom:18px">Six prompts. <em>One hour.</em></h2>
+  <table>
+    <tr><td class="num">1</td><td class="p">we build it now</td><td class="d">Probed store feeds, found a model path with no API key, wrote and ran the app, fixed its own first run.</td></tr>
+    <tr><td class="num">2</td><td class="p">move server to gcloud and host</td><td class="d">Deployed to Cloud Run, fixed two permission blockers, verified the public link with a real request.</td></tr>
+    <tr><td class="num">3</td><td class="p">lets make a proper ui · add opsagents ai logo too</td><td class="d">New editorial layout, live progress, store chips that light up. Redrew the logo as SVG from a pasted image.</td></tr>
+    <tr><td class="num">4</td><td class="p">it is very slow demo is 2 minutes</td><td class="d">50 to 80 s became about 20 s. Then it caught its own regression (next slides).</td></tr>
+    <tr><td class="num">5</td><td class="p">add a refinment option if user dont like the look</td><td class="d">Sessions, a refine endpoint, the refine box. Goes back to the stores when you ask for something new.</td></tr>
+    <tr><td class="num">6</td><td class="p">lets try to make it reacher</td><td class="d">14 more stores picked to fill gaps: formalwear, tailoring, ski, extended sizes. Re-tested the riskiest briefs.</td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Job two · the agent loop</div>
+  <h2 class="serif">Code fetches and adds. <em>Fable judges.</em></h2>
+  <div class="flow">
+    <div class="box">Brief<small>"rooftop dinner, under $500"</small></div><span class="arr">→</span>
+    <div class="box">Plan<small>Haiku 4.5</small></div><span class="arr">→</span>
+    <div class="box">Search<small>code · 27 live stores</small></div><span class="arr">→</span>
+    <div class="box f">Curate<small>Fable 5.1</small></div><span class="arr">→</span>
+    <div class="box">Budget check<small>code</small></div><span class="arr">→</span>
+    <div class="box">Look</div><span class="arr">↺</span>
+    <div class="box f">Refine<small>Fable 5.1</small></div>
+  </div>
+  <div class="rules">
+    <div class="rule"><span>RULE 1</span>The pieces have to work together</div>
+    <div class="rule"><span>RULE 2</span>At least three different stores</div>
+    <div class="rule"><span>RULE 3</span>A hard budget</div>
+    <div class="rule"><span>RULE 4</span>The right gender</div>
+    <div class="rule"><span>RULE 5</span>Never invent a product</div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Job two · the stylist prompt, exactly (Fable 5.1)</div>
+<pre>You are a personal stylist. The shopper says: """<span class="v">{brief}</span>"""
+Your plan: <span class="v">{who, budget, vibe, palette}</span>
+
+Below are LIVE, in-stock products pulled seconds ago from <span class="v">{N}</span> independent stores.
+Each line: id | store | title | type | price USD | tags.
+<span class="v">{shelves}</span>
+
+Build ONE complete outfit: exactly one product per slot. Rules:
+- <span class="hl">The pieces must work TOGETHER</span> (palette, formality, season) and suit the shopper.
+  Never pick an item made for a different gender than the shopper.
+- <span class="hl">Use at least 3 different stores</span> across the outfit. That is the point:
+  no single store could sell this look.
+- <span class="hl">BUDGET IS A HARD LIMIT</span> of $<span class="v">{budget}</span>: add up the prices of your picks before answering;
+  if the sum is over, swap in cheaper pieces until it fits.
+- <span class="hl">Only use ids from the lists. Never invent a product.</span>
+- Only if a slot list is EMPTY, put it in "research" with better keywords
+  and I will search again.
+Return ONLY JSON:
+{"title":"name of the look, max 6 words",
+ "note":"ONE sentence, max 25 words, on why the look works",
+ "picks":[{"slot":"top","id":"...","why":"max 12 words, say what it pairs with"}],
+ "research":[{"slot":"shoes","keywords":["..."],"exclude":["..."]}]}</pre>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">Job two · the refine prompt, exactly (Fable 5.1)</div>
+<pre>You are a personal stylist. The shopper's brief: """<span class="v">{brief}</span>"""
+Earlier feedback you already applied: <span class="v">{history}</span>
+You proposed this look ("<span class="v">{title}</span>"):
+<span class="v">{current picks: slot | id | store | title | price}</span>
+
+The shopper now says: """<span class="v">{feedback}</span>"""
+
+Revise the look to do what they asked. <span class="hl">Keep every piece they did not complain about.
+Change only what the feedback needs</span>, then make sure the pieces still work together.
+<span class="v">{shelves}</span>
+
+Rules: one product per slot; only ids from the lists; never invent a product;
+at least 3 different stores; hard budget unless the shopper just changed it
+(then put the new number in "budget").
+<span class="hl">If the feedback needs a product that is NOT on the lists</span> (a new slot like a hat),
+put that slot in "research" with keywords and I will search the stores again.
+Return ONLY JSON: {title, note (what you changed and why), budget, picks, research}</pre>
+  <p class="lead" style="margin-top:16px;font-size:16px">The planner prompt (Haiku 4.5) is in PROMPTS.md. It turns the brief into garment slots and literal search keywords.</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">My favourite moment</div>
+  <h2 class="serif">It caught <em>its own</em> mistake.</h2>
+  <div class="story">
+    <div class="beat"><div class="k">I said</div><div class="big">"it is very slow"</div><p>50 to 80 seconds a look. The demo is two minutes.</p></div>
+    <div class="beat"><div class="k">It made it 3× faster</div><div class="big good">≈ 20 s</div><p>Thinking off, lean system prompt, shorter shortlists, 12-word reasons. Then it re-ran its own tests.</p></div>
+    <div class="beat"><div class="k">And found this</div><div class="big bad">$728 <span style="font-size:.5em;color:var(--mute)">of $500</span></div><p>Its speed-up made it overspend. It moved the budget rule <b>out of the prompt and into code</b>: over-budget looks get the priciest piece swapped down before you see them.</p></div>
+  </div>
+  <p class="lead" style="margin-top:22px">Lesson: don't ask a model to do arithmetic you can do yourself.</p>
+</section>
+
+<section class="slide">
+  <div class="eyebrow">It's all public</div>
+  <h2 class="serif">Read it. Run it. <em>Add your store.</em></h2>
+  <div class="links">
+    <a href="https://github.com/OpsAgentsAI/cross-store-stylist/blob/main/PROMPTS.md" target="_blank" rel="noopener"><span>Every prompt</span>github.com/OpsAgentsAI/cross-store-stylist → PROMPTS.md</a>
+    <a href="/" ><span>Try it</span>cross-store-stylist-611895754140.us-central1.run.app</a>
+    <a href="https://github.com/OpsAgentsAI/cross-store-stylist" target="_blank" rel="noopener"><span>Run it yourself</span>node server.js · zero dependencies · one line per store</a>
+  </div>
+</section>
+
+<footer>
+  <svg viewBox="0 0 1024 1024" aria-hidden="true"><circle cx="410" cy="512" r="296" fill="none" stroke="#7b83f2" stroke-width="74"/><g stroke="#4dd0e1" stroke-width="74" stroke-linecap="round" fill="none"><path d="M452 778 655 245 862 778M655 245 890 360M548 562H768"/></g></svg>
+  <span class="brand">OpsAgents AI</span><span>Cross-Store Stylist</span>
+  <div class="nav"><span id="count"></span><button id="prev" aria-label="Previous slide">←</button><button id="next" aria-label="Next slide">→</button></div>
+</footer>
+<script>
+const slides = [...document.querySelectorAll('.slide')]; let i = Math.min(slides.length - 1, Math.max(0, (parseInt(location.hash.slice(1)) || 1) - 1));
+function show(n) { i = Math.max(0, Math.min(slides.length - 1, n)); slides.forEach((s, j) => s.classList.toggle('on', j === i)); document.getElementById('count').textContent = (i + 1) + ' / ' + slides.length; document.getElementById('bar').style.width = ((i + 1) / slides.length * 100) + '%'; history.replaceState(null, '', '#' + (i + 1)); }
+document.getElementById('next').onclick = () => show(i + 1); document.getElementById('prev').onclick = () => show(i - 1);
+addEventListener('keydown', (e) => { if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(i + 1); } if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1); } if (e.key === 'Home') show(0); if (e.key === 'End') show(slides.length - 1); });
+let sx = null; addEventListener('touchstart', (e) => sx = e.touches[0].clientX); addEventListener('touchend', (e) => { if (sx === null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 50) show(i + (dx < 0 ? 1 : -1)); sx = null; });
+show(i);
+</script>
+</body>
+</html>

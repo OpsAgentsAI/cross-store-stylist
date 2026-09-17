@@ -53,7 +53,7 @@ Add a store: one line in `STORES` in `server.js`. Any Shopify domain works.
 
 ## The prompts, and how we used Fable 5.1
 
-Fable 5.1 both **built** this (one Claude Code session, six human prompts) and **is** the stylist inside it. Every prompt, human and runtime, is in **[PROMPTS.md](PROMPTS.md)**.
+Fable 5.1 both **built** this (one Claude Code session, six human prompts) and **is** the stylist inside it. Every prompt, human and runtime, is in **[PROMPTS.md](PROMPTS.md)**, and as a 9-slide deck at [`/deck`](https://cross-store-stylist-611895754140.us-central1.run.app/deck).
 
 ## Notes
 
