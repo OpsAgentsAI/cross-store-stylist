@@ -57,12 +57,13 @@ async function loadStore(store) {
   return products;
 }
 
-function searchSlot(all, slot) {
+function searchSlot(all, slot, maxPrice = Infinity) {
   const kws = (slot.keywords || []).map((k) => String(k).toLowerCase()).filter(Boolean);
   const excl = (slot.exclude || []).map((k) => String(k).toLowerCase()).filter(Boolean);
   const scored = [];
   for (const p of all) {
     const title = p.title.toLowerCase(), type = p.type.toLowerCase(), tags = p.tags.join(' ').toLowerCase();
+    if (p.price > maxPrice) continue;
     if (excl.some((e) => title.includes(e) || type.includes(e))) continue;
     let score = 0;
     for (const k of kws) {
@@ -83,9 +84,9 @@ function searchSlot(all, slot) {
   const perStore = {}, out = [];
   for (const s of scored) {
     perStore[s.p.store] = (perStore[s.p.store] || 0) + 1;
-    if (perStore[s.p.store] > 3) continue;
+    if (perStore[s.p.store] > 2) continue;
     out.push(s.p);
-    if (out.length >= 16) break;
+    if (out.length >= 10) break;
   }
   return out;
 }
@@ -113,7 +114,7 @@ const EMPTY_CWD = fs.mkdtempSync(path.join(os.tmpdir(), 'stylist-'));
 // Hosted on Google Cloud: Vertex AI with the service's own identity (no keys anywhere).
 const VERTEX_PROJECT = process.env.VERTEX_PROJECT || '';
 const VERTEX_PLAN = process.env.VERTEX_PLAN_MODEL || 'gemini-2.5-flash';
-const VERTEX_CURATE = process.env.VERTEX_CURATE_MODEL || 'gemini-2.5-pro';
+const VERTEX_CURATE = process.env.VERTEX_CURATE_MODEL || 'gemini-2.5-flash';
 let vtok = { v: '', exp: 0 };
 async function vertexToken() {
   if (Date.now() < vtok.exp) return vtok.v;
@@ -126,7 +127,7 @@ async function askVertex(prompt, model) {
   const res = await fetch(`https://aiplatform.googleapis.com/v1/projects/${VERTEX_PROJECT}/locations/global/publishers/google/models/${model}:generateContent`, {
     method: 'POST',
     headers: { authorization: `Bearer ${await vertexToken()}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.4 } }),
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.4, thinkingConfig: { thinkingBudget: 0 } } }),
   });
   const j = await res.json();
   if (!res.ok) throw new Error(j.error?.message || `Vertex ${res.status}`);
@@ -147,8 +148,8 @@ async function askModel(prompt, model = MODEL) {
   }
   // No key? Use the Claude Code login already on this machine, headless.
   return new Promise((resolve, reject) => {
-    const env = { ...process.env }; delete env.CLAUDECODE; delete env.CLAUDE_CODE_ENTRYPOINT;
-    const child = spawn(CLAUDE_BIN, ['-p', '--model', model, '--output-format', 'text', '--max-turns', '1', '--tools', ''], { cwd: EMPTY_CWD, env });
+    const env = { ...process.env, MAX_THINKING_TOKENS: process.env.STYLIST_THINKING || '0' }; delete env.CLAUDECODE; delete env.CLAUDE_CODE_ENTRYPOINT;
+    const child = spawn(CLAUDE_BIN, ['-p', '--model', model, '--output-format', 'text', '--max-turns', '1', '--tools', '', '--setting-sources', '', '--system-prompt', 'You are a personal stylist. Reply with JSON only, no code fences.'], { cwd: EMPTY_CWD, env });
     let out = '', err = '';
     child.stdout.on('data', (d) => (out += d));
     child.stderr.on('data', (d) => (err += d));
@@ -181,11 +182,11 @@ ${shelves}
 Build ONE complete outfit: exactly one product per slot. Rules:
 - The pieces must work TOGETHER (palette, formality, season) and suit the shopper (${plan.who}). Never pick an item made for a different gender than the shopper.
 - Use at least 3 different stores across the outfit. That is the point: no single store could sell this look.
-- Respect the budget if one was given (total of all pieces).
+- BUDGET IS A HARD LIMIT${plan.budget ? ` of $${plan.budget}` : ''}: add up the prices of your picks before answering; if the sum is over, swap in cheaper pieces until it fits.
 - Only use ids from the lists. Never invent a product.
-${canRetry ? '- If a slot has NO acceptable product, do not force it: put it in "research" with better keywords and I will search again.' : '- If a slot truly has nothing acceptable, omit it and say so in "note".'}
+${canRetry ? '- Only if a slot list is EMPTY, put it in "research" with better keywords and I will search again. Otherwise pick the best available and leave "research" empty.' : '- If a slot truly has nothing acceptable, omit it and say so in "note".'}
 Return ONLY JSON:
-{"title":"name of the look","note":"2 sentences on why the look works as a whole","picks":[{"slot":"top","id":"...","why":"one sentence, mention what it pairs with"}],"research":[{"slot":"shoes","keywords":["..."],"exclude":["..."]}]}`;
+{"title":"name of the look, max 6 words","note":"ONE sentence, max 25 words, on why the look works","picks":[{"slot":"top","id":"...","why":"max 12 words, say what it pairs with"}],"research":[{"slot":"shoes","keywords":["..."],"exclude":["..."]}]}`;
 
 function shelfText(shelfBySlot) {
   return Object.entries(shelfBySlot).map(([slot, items]) =>
@@ -193,6 +194,36 @@ function shelfText(shelfBySlot) {
 }
 
 // ---------- the agent loop ----------
+const sessions = new Map(); // id -> { brief, plan, shelves, byId, all, picks, title, history }
+
+function makeFill(sess, say) {
+  return (slot) => {
+    const found = searchSlot(sess.all, slot, sess.plan.budget ? sess.plan.budget * 0.5 : Infinity);
+    if (!found.length && sess.shelves[slot.slot]?.length) return; // a retry never makes a shelf worse
+    sess.shelves[slot.slot] = found.map((p) => { const id = `${slot.slot.replace(/\W/g, '')}-${sess.byId.size + 1}`; const item = { ...p, id }; sess.byId.set(id, item); return item; });
+    say('shelf', { slot: slot.slot, count: sess.shelves[slot.slot].length, stores: [...new Set(sess.shelves[slot.slot].map((p) => p.storeName))] });
+  };
+}
+
+function finish(sess, look, say, t0) {
+  const { plan, shelves, byId } = sess;
+  const picks = (look.picks || []).map((k) => ({ ...k, product: byId.get(k.id) })).filter((k) => k.product);
+  // The budget is enforced in code, not trusted to the model: swap the priciest piece down until it fits.
+  const sum = () => picks.reduce((s, k) => s + k.product.price, 0);
+  for (let guard = 0; plan.budget && sum() > plan.budget && guard < 6; guard++) {
+    const over = sum() - plan.budget;
+    const worst = [...picks].sort((a, b) => b.product.price - a.product.price)
+      .map((k) => ({ k, alt: (shelves[k.slot] || []).filter((p) => p.price < k.product.price && !picks.some((x) => x.product.id === p.id)).sort((a, b) => (a.price <= k.product.price - over ? 0 : 1) - (b.price <= k.product.price - over ? 0 : 1) || b.price - a.price)[0] }))
+      .find((x) => x.alt);
+    if (!worst) break;
+    say('step', { text: `Over budget by $${over.toFixed(0)}: swapping the ${worst.k.slot} for a cheaper match…` });
+    worst.k.why = `Swapped in to keep the look inside $${plan.budget}.`;
+    worst.k.product = worst.alt; worst.k.id = worst.alt.id;
+  }
+  sess.picks = picks; sess.title = look.title;
+  say('look', { id: sess.id, title: look.title, note: look.note, picks, total: sum(), stores: [...new Set(picks.map((k) => k.product.storeName))], budget: plan.budget, seconds: Math.round((Date.now() - t0) / 1000) });
+}
+
 async function style(brief, say) {
   const t0 = Date.now();
   say('step', { text: 'Reading the brief and planning the search…' });
@@ -201,28 +232,53 @@ async function style(brief, say) {
   say('plan', plan);
   const all = (await loading).flat();
   say('step', { text: `Searching ${all.length.toLocaleString()} live products across ${STORES.length} stores…` });
-
-  const byId = new Map(); const shelves = {};
-  const fill = (slot) => {
-    const found = searchSlot(all, slot);
-    if (!found.length && shelves[slot.slot]?.length) return; // a retry never makes a shelf worse
-    shelves[slot.slot] = found.map((p, i) => { const id = `${slot.slot.replace(/\W/g, '')}-${byId.size + 1}`; const item = { ...p, id }; byId.set(id, item); return item; });
-    say('shelf', { slot: slot.slot, count: shelves[slot.slot].length, stores: [...new Set(shelves[slot.slot].map((p) => p.storeName))] });
-  };
+  const sess = { id: Math.random().toString(36).slice(2, 10), brief, plan, all, shelves: {}, byId: new Map(), picks: [], history: [] };
+  sessions.set(sess.id, sess); if (sessions.size > 50) sessions.delete(sessions.keys().next().value);
+  const fill = makeFill(sess, say);
   plan.slots.forEach(fill);
 
   say('step', { text: 'Putting the look together…' });
-  const cp = CURATE_PROMPT(brief, plan, shelfText(shelves), true);
+  const cp = CURATE_PROMPT(brief, plan, shelfText(sess.shelves), true);
   if (process.env.STYLIST_DEBUG) fs.writeFileSync('/tmp/stylist-curate-prompt.txt', cp);
   let look = parseJson(await askModel(cp));
   if (look.research?.length) {
-    say('step', { text: `Not happy with ${look.research.map((r) => r.slot).join(', ')} — searching again with new keywords…` });
+    say('step', { text: `Nothing on the shelf for ${look.research.map((r) => r.slot).join(', ')}: searching again with new keywords…` });
     look.research.forEach(fill);
-    look = parseJson(await askModel(CURATE_PROMPT(brief, plan, shelfText(shelves), false)));
+    look = parseJson(await askModel(CURATE_PROMPT(brief, plan, shelfText(sess.shelves), false)));
   }
-  const picks = (look.picks || []).map((k) => ({ ...k, product: byId.get(k.id) })).filter((k) => k.product);
-  const total = picks.reduce((s, k) => s + k.product.price, 0);
-  say('look', { title: look.title, note: look.note, picks, total, stores: [...new Set(picks.map((k) => k.product.storeName))], budget: plan.budget, seconds: Math.round((Date.now() - t0) / 1000) });
+  finish(sess, look, say, t0);
+}
+
+const REFINE_PROMPT = (sess, feedback, canSearch) => `You are a personal stylist. The shopper's brief: """${sess.brief}"""
+${sess.history.length ? 'Earlier feedback you already applied: ' + sess.history.map((h) => `"${h}"`).join('; ') + '\n' : ''}You proposed this look ("${sess.title}"):
+${sess.picks.map((k) => `- ${k.slot}: ${k.id} | ${k.product.storeName} | ${k.product.title} | $${k.product.price}`).join('\n')}
+
+The shopper now says: """${feedback}"""
+
+Revise the look to do what they asked. Keep every piece they did not complain about. Change only what the feedback needs, then make sure the pieces still work together.
+LIVE, in-stock products you can choose from. Each line: id | store | title | type | price USD | tags.
+${shelfText(sess.shelves)}
+
+Rules: one product per slot; only ids from the lists; never invent a product; at least 3 different stores; ${sess.plan.budget ? `hard budget $${sess.plan.budget} unless the shopper just changed it (then put the new number in "budget")` : 'no budget unless the shopper just gave one (then put it in "budget")'}; never pick an item made for a different gender than the shopper (${sess.plan.who}).
+${canSearch ? 'If the feedback needs a product that is NOT on the lists (a new slot like a hat, or a different kind of item for an existing slot), put that slot in "research" with 6-10 plain garment-noun keywords and I will search the stores again. Otherwise leave "research" empty.' : 'Work with what is on the lists.'}
+Return ONLY JSON:
+{"title":"max 6 words","note":"ONE sentence, max 25 words, saying what you changed and why it works","budget":number|null,"picks":[{"slot":"top","id":"...","why":"max 12 words"}],"research":[{"slot":"hat","keywords":["..."],"exclude":["..."]}]}`;
+
+async function refine(id, feedback, say) {
+  const t0 = Date.now();
+  const sess = sessions.get(id);
+  if (!sess) throw new Error('That look has expired. Start a new one.');
+  say('step', { text: 'Rethinking the look with your note…' });
+  let look = parseJson(await askModel(REFINE_PROMPT(sess, feedback, true)));
+  if (typeof look.budget === 'number' && look.budget > 0) sess.plan.budget = look.budget;
+  if (look.research?.length) {
+    say('step', { text: `Going back to the stores for ${look.research.map((r) => r.slot).join(', ')}…` });
+    const fill = makeFill(sess, say);
+    look.research.forEach((r) => { delete sess.shelves[r.slot]; fill(r); });
+    look = parseJson(await askModel(REFINE_PROMPT(sess, feedback, false)));
+  }
+  sess.history.push(feedback);
+  finish(sess, look, say, t0);
 }
 
 // ---------- http ----------
@@ -230,13 +286,14 @@ const DAILY_CAP = Number(process.env.STYLIST_DAILY_CAP || 300);
 let runs = { day: '', n: 0 };
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
-  if (url.pathname === '/api/style') {
+  if (url.pathname === '/api/style' || url.pathname === '/api/refine') {
     const day = new Date().toISOString().slice(0, 10);
     if (runs.day !== day) runs = { day, n: 0 };
     if (++runs.n > DAILY_CAP) { res.writeHead(429); return res.end('daily demo limit reached'); }
     res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache, no-transform', connection: 'keep-alive', 'x-accel-buffering': 'no' });
     const say = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    try { await style((url.searchParams.get('q') || '').slice(0, 600), say); }
+    const q = (url.searchParams.get('q') || '').slice(0, 600);
+    try { await (url.pathname === '/api/refine' ? refine(url.searchParams.get('id'), q, say) : style(q, say)); }
     catch (e) { say('fail', { text: String(e.message || e) }); }
     return res.end();
   }

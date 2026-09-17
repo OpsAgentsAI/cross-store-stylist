@@ -73,6 +73,10 @@
   .price { font-size:15px; }
   .why { font-size:13.5px; color:var(--mute); margin-top:6px; }
   .buy { margin-top:auto; padding-top:10px; font-size:13px; font-weight:700; color:var(--accent); }
+  .refine { margin-top:26px; border-top:1px solid var(--line); padding-top:20px; }
+  .refine label { display:block; font-weight:700; margin-bottom:8px; }
+  .refine form input { border-width:1px; padding:14px 16px; font-size:16px; }
+  .refine form button { padding:14px 22px; }
   .fine { margin-top:34px; font-size:13px; color:var(--mute); max-width:80ch; }
   .err { color:#c0392b; font-weight:600; }
 </style>
@@ -119,15 +123,17 @@ const step = (name) => { const order = ['plan','search','style']; const i = orde
 let tick;
 fetch('/api/stores').then((r) => r.json()).then((list) => { $('#stores').innerHTML = list.map((s) => '<span class="st" data-n="' + esc(s.name) + '">' + esc(s.name) + '</span>').join(''); });
 document.querySelectorAll('.chip').forEach((c) => c.onclick = () => { $('#q').value = c.textContent; $('#f').requestSubmit(); });
-$('#f').onsubmit = (e) => {
-  e.preventDefault();
-  const q = $('#q').value.trim(); if (!q) return;
-  $('#out').innerHTML = ''; $('#shelves').innerHTML = ''; $('#go').disabled = true; $('#work').classList.add('on');
-  document.querySelectorAll('.st').forEach((el) => { el.classList.remove('in'); el.textContent = el.dataset.n; });
-  step('plan'); $('#status').textContent = 'Reading the brief and deciding what the outfit needs…';
+let lookId = null;
+$('#f').onsubmit = (e) => { e.preventDefault(); const q = $('#q').value.trim(); if (q) run('/api/style?q=' + encodeURIComponent(q), false); };
+function run(endpoint, isRefine) {
+  $('#shelves').innerHTML = ''; $('#go').disabled = true; $('#work').classList.add('on');
+  document.querySelectorAll('#out button, #out input').forEach((el) => el.disabled = true);
+  if (!isRefine) { $('#out').innerHTML = ''; document.querySelectorAll('.st').forEach((el) => { el.classList.remove('in'); el.textContent = el.dataset.n; }); }
+  step(isRefine ? 'style' : 'plan'); $('#status').textContent = isRefine ? 'Rethinking the look with your note…' : 'Reading the brief and deciding what the outfit needs…';
+  if (isRefine) $('#work').scrollIntoView({ behavior: 'smooth', block: 'start' });
   const t0 = Date.now(); clearInterval(tick); tick = setInterval(() => { $('#clock').textContent = Math.round((Date.now() - t0) / 1000) + 's'; }, 500);
-  const es = new EventSource('/api/style?q=' + encodeURIComponent(q));
-  const done = () => { es.close(); clearInterval(tick); $('#go').disabled = false; };
+  const es = new EventSource(endpoint);
+  const done = () => { es.close(); clearInterval(tick); $('#go').disabled = false; document.querySelectorAll('#out button, #out input').forEach((el) => el.disabled = false); };
   es.addEventListener('store', (m) => { const d = JSON.parse(m.data); const el = document.querySelector('.st[data-n="' + CSS.escape(d.store) + '"]'); if (el && d.count) { el.classList.add('in'); el.innerHTML = esc(d.store) + ' <b>' + d.count + '</b>'; } });
   es.addEventListener('plan', (m) => { const d = JSON.parse(m.data); $('#status').innerHTML = '<b>Plan:</b> ' + esc(d.vibe) + (d.budget ? ' · budget $' + d.budget : ''); });
   es.addEventListener('step', (m) => { const t = JSON.parse(m.data).text; if (/Searching/.test(t)) step('search'); if (/Putting|searching again/.test(t)) step('style'); if (!/Reading/.test(t)) $('#status').innerHTML = esc(t); });
@@ -142,12 +148,17 @@ $('#f').onsubmit = (e) => {
       '<div class="fact"><div class="k">Stores</div><div class="v">' + d.stores.length + ' <small>' + d.stores.map(esc).join(' · ') + '</small></div></div>' +
       '<div class="fact"><div class="k">Pieces</div><div class="v">' + d.picks.length + '</div></div>' +
       '<div class="fact"><div class="k">Time</div><div class="v">' + d.seconds + 's</div></div></div>' +
-      '<div class="grid">' + d.picks.map((k, i) => '<a class="card" style="animation-delay:' + (i * 90) + 'ms" target="_blank" rel="noopener" href="' + esc(k.product.url) + '"><img loading="lazy" src="' + esc(k.product.image) + (k.product.image.includes('?') ? '&' : '?') + 'width=600" alt="' + esc(k.product.title) + '"><div class="body"><div class="row"><span class="slot">' + esc(k.slot) + '</span><span class="store">' + esc(k.product.storeName) + '</span></div><div class="title">' + esc(k.product.title) + '</div><div class="price">$' + k.product.price.toFixed(0) + '</div><div class="why">' + esc(k.why) + '</div><div class="buy">View at ' + esc(k.product.storeName) + ' →</div></div></a>').join('') + '</div></section>';
+      '<div class="grid">' + d.picks.map((k, i) => '<a class="card" style="animation-delay:' + (i * 90) + 'ms" target="_blank" rel="noopener" href="' + esc(k.product.url) + '"><img loading="lazy" src="' + esc(k.product.image) + (k.product.image.includes('?') ? '&' : '?') + 'width=600" alt="' + esc(k.product.title) + '"><div class="body"><div class="row"><span class="slot">' + esc(k.slot) + '</span><span class="store">' + esc(k.product.storeName) + '</span></div><div class="title">' + esc(k.product.title) + '</div><div class="price">$' + k.product.price.toFixed(0) + '</div><div class="why">' + esc(k.why) + '</div><div class="buy">View at ' + esc(k.product.storeName) + ' →</div></div></a>').join('') + '</div>' +
+      '<div class="refine"><label for="rq">Not quite right? Tell the stylist.</label><form id="rf"><input id="rq" placeholder="Make it dressier · swap the shoes for flats · add a hat · get it under $350"><button class="go">Refine</button></form>' +
+      '<div class="chips"><button class="chip r">Make it dressier</button><button class="chip r">Swap the shoes for something flat</button><button class="chip r">Cheaper: get it under $350</button><button class="chip r">Add a piece of jewelry</button></div></div></section>';
+    lookId = d.id;
+    $('#rf').onsubmit = (ev) => { ev.preventDefault(); const t = $('#rq').value.trim(); if (t) run('/api/refine?id=' + lookId + '&q=' + encodeURIComponent(t), true); };
+    document.querySelectorAll('.chip.r').forEach((c) => c.onclick = () => { $('#rq').value = c.textContent; $('#rf').requestSubmit(); });
     $('#out').scrollIntoView({ behavior: 'smooth', block: 'start' });
     done();
   });
   es.onerror = done;
-};
+}
 </script>
 </body>
 </html>

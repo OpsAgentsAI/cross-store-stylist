@@ -20,7 +20,10 @@ already publishes `/products.json`. The agent is the integration.
 3. **Curate** (Claude Fable 5.1): ~60 real candidates → one product per slot. Rules: pieces must work together, at least 3 stores, total inside budget, never invent a product.
 4. **Re-search**: if a shelf has nothing acceptable, the stylist refuses to force it, writes new keywords, and the search runs again.
 
-Everything streams to the page, so you watch the agent work.
+5. **Refine by talking**: "swap the shoes for flats", "add a hat", "get it under $350". The stylist keeps what you liked, changes what you didn't, and goes back to the stores if it needs something new.
+6. **The budget is enforced in code**, not trusted to the model: an over-budget look gets its priciest piece swapped down before you see it.
+
+Everything streams to the page, so you watch the agent work. A look takes about 20 seconds; a refinement about 10.
 
 ## Run it
 
