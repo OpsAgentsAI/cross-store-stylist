@@ -51,13 +51,9 @@ gcloud run deploy cross-store-stylist --source . --project=$P --region=me-west1 
 
 Add a store: one line in `STORES` in `server.js`. Any Shopify domain works.
 
-## The prompt that built it
+## The prompts, and how we used Fable 5.1
 
-> Build a one-page web app: one stylist agent that assembles a complete outfit across several
-> independent public Shopify stores. Live catalogs from `/products.json`, no integrations.
-> The agent plans the slots, searches every store, picks one product per slot so the pieces
-> work together, uses at least 3 stores, respects the budget, explains each pick, and re-searches
-> when a shelf is empty. Stream the steps to the page. Zero dependencies.
+Fable 5.1 both **built** this (one Claude Code session, six human prompts) and **is** the stylist inside it. Every prompt, human and runtime, is in **[PROMPTS.md](PROMPTS.md)**.
 
 ## Notes
 
