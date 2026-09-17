@@ -5,7 +5,7 @@
 Built in one hour at the Tel Aviv Claude Code Build Day (track: Breakthrough) by OpsAgents AI.
 
 Tell it where you're going ("rooftop dinner in Tel Aviv in September, woman, under $500").
-It plans the outfit, searches the **live** catalogs of 13 unrelated stores at once,
+It plans the outfit, searches the **live** catalogs of 27 unrelated stores at once,
 and assembles one coherent look across brands, in budget, with a reason for every piece and a buy link.
 
 No store integration, no API keys from the stores, no partnership: every Shopify storefront
@@ -16,7 +16,7 @@ already publishes `/products.json`. The agent is the integration.
 ## How it works
 
 1. **Plan** (Claude Haiku 4.5): brief → garment slots, search keywords, budget, palette.
-2. **Search** (plain code): ~7,000 in-stock products pulled live from 13 stores, scored per slot, shelf kept diverse across stores.
+2. **Search** (plain code): ~15,000 in-stock products pulled live from 27 stores, scored per slot, shelf kept diverse across stores.
 3. **Curate** (Claude Fable 5.1): ~60 real candidates → one product per slot. Rules: pieces must work together, at least 3 stores, total inside budget, never invent a product.
 4. **Re-search**: if a shelf has nothing acceptable, the stylist refuses to force it, writes new keywords, and the search runs again.
 

@@ -21,6 +21,20 @@ const STORES = [
   { id: 'marinelayer', name: 'Marine Layer', host: 'www.marinelayer.com' },
   { id: 'birdies', name: 'Birdies', host: 'www.birdies.com' },
   { id: 'gorjana', name: 'Gorjana', host: 'www.gorjana.com' },
+  { id: 'birdygrey', name: 'Birdy Grey', host: 'birdygrey.com' },
+  { id: 'petalandpup', name: 'Petal & Pup', host: 'www.petalandpup.com' },
+  { id: 'princesspolly', name: 'Princess Polly', host: 'us.princesspolly.com' },
+  { id: 'hillhouse', name: 'Hill House Home', host: 'hillhousehome.com' },
+  { id: 'universalstandard', name: 'Universal Standard', host: 'www.universalstandard.com' },
+  { id: 'stateandliberty', name: 'State & Liberty', host: 'www.stateandliberty.com' },
+  { id: 'twillory', name: 'Twillory', host: 'www.twillory.com' },
+  { id: 'ministryofsupply', name: 'Ministry of Supply', host: 'www.ministryofsupply.com' },
+  { id: 'taft', name: 'Taft', host: 'taftclothing.com' },
+  { id: 'thursday', name: 'Thursday Boot Co.', host: 'thursdayboots.com' },
+  { id: 'halfdays', name: 'Halfdays', host: 'halfdays.com' },
+  { id: 'cotopaxi', name: 'Cotopaxi', host: 'www.cotopaxi.com' },
+  { id: 'outerknown', name: 'Outerknown', host: 'www.outerknown.com' },
+  { id: 'girlfriend', name: 'Girlfriend Collective', host: 'www.girlfriend.com' },
   { id: 'kith', name: 'Kith', host: 'kith.com' },
   { id: 'taylorstitch', name: 'Taylor Stitch', host: 'www.taylorstitch.com' },
   { id: 'allbirds', name: 'Allbirds', host: 'www.allbirds.com' },
@@ -40,7 +54,7 @@ async function loadStore(store) {
   const pages = await Promise.all(Array.from({ length: PAGES }, (_, i) =>
     fetch(`https://${store.host}/products.json?limit=250&page=${i + 1}`, {
       headers: { 'user-agent': 'Mozilla/5.0 (cross-store-stylist demo)' },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(25000),
     }).then((r) => (r.ok ? r.json() : { products: [] })).then((j) => j.products || []).catch(() => [])));
   for (const p of pages.flat()) {
     const v = (p.variants || []).find((x) => x.available) || null;

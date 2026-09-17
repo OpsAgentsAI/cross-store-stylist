@@ -88,8 +88,8 @@
   <a href="https://github.com/OpsAgentsAI/cross-store-stylist" target="_blank" rel="noopener">Source on GitHub</a>
 </header>
 <main>
-  <h1 class="serif">One stylist. Thirteen stores. <em>One outfit.</em></h1>
-  <p class="sub">Tell it where you're going. An agent shops thirteen independent Shopify stores live and builds a look no single store could sell you, inside your budget. No integrations. The agent is the integration.</p>
+  <h1 class="serif">One stylist. <span id="n">27</span> stores. <em>One outfit.</em></h1>
+  <p class="sub">Tell it where you're going. An agent shops dozens of independent Shopify stores live and builds a look no single store could sell you, inside your budget. No integrations. The agent is the integration.</p>
   <form id="f">
     <input id="q" aria-label="Where are you going?" placeholder="Outdoor wedding in Tuscany in October, under $600" autofocus>
     <button class="go" id="go">Style me</button>
@@ -121,7 +121,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':
 const step = (name) => { const order = ['plan','search','style']; const i = order.indexOf(name);
   document.querySelectorAll('.step').forEach((el) => { const j = order.indexOf(el.dataset.s); el.className = 'step' + (j < i ? ' done' : j === i ? ' live' : ''); }); };
 let tick;
-fetch('/api/stores').then((r) => r.json()).then((list) => { $('#stores').innerHTML = list.map((s) => '<span class="st" data-n="' + esc(s.name) + '">' + esc(s.name) + '</span>').join(''); });
+fetch('/api/stores').then((r) => r.json()).then((list) => { $('#n').textContent = list.length; $('#stores').innerHTML = list.map((s) => '<span class="st" data-n="' + esc(s.name) + '">' + esc(s.name) + '</span>').join(''); });
 document.querySelectorAll('.chip').forEach((c) => c.onclick = () => { $('#q').value = c.textContent; $('#f').requestSubmit(); });
 let lookId = null;
 $('#f').onsubmit = (e) => { e.preventDefault(); const q = $('#q').value.trim(); if (q) run('/api/style?q=' + encodeURIComponent(q), false); };
