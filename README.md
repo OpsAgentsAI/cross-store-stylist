@@ -33,6 +33,17 @@ Model access, either one:
 
 Options: `STYLIST_MODEL` (default `claude-fable-5-1`), `STYLIST_PLAN_MODEL`, `STYLIST_PAGES` (catalog depth per store, default 4).
 
+## Host it (Cloud Run)
+
+Hosted, there is no Claude Code login, so it needs `ANTHROPIC_API_KEY` (kept in Secret Manager, never in the image):
+
+```bash
+printf '%s' "$ANTHROPIC_API_KEY" | gcloud secrets create stylist-anthropic-key --data-file=- --project=$P
+gcloud run deploy cross-store-stylist --source . --project=$P --region=me-west1 \
+  --allow-unauthenticated --max-instances=2 --timeout=300 \
+  --update-secrets=ANTHROPIC_API_KEY=stylist-anthropic-key:latest
+```
+
 Add a store: one line in `STORES` in `server.js`. Any Shopify domain works.
 
 ## The prompt that built it
